@@ -1,0 +1,82 @@
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Video Call Demo</title>
+</head>
+
+<body>
+    <h1>
+        Video Call Demo
+    </h1>
+
+    <h4>My Feed: </h4>
+    <div id="me"></div>
+
+    <h4>Remote Feed: </h4>
+    <div id="remote-container">
+
+    </div>
+    <script>
+        const handleFail = (error) => {
+            console.log('Error: ', error)
+        }
+        const remoteContainer = document.getElementById("remote-container")
+
+        const addVideoStream = (elementId) => {
+            const streamDiv = document.createElement("div")
+            streamDiv.id = elementId
+            streamDiv.style.transform = "rotateY(180deg)"
+            remoteContainer.appendChild(streamDiv)
+        }
+        const remoteVideoStream = (elementId) => {
+            const remDiv = document.getElementById(elementId)
+            if (remDiv) {
+                remDiv.parentNode.removeChild(remDiv)
+            }
+        }
+        const client = AgoraRTC.createClient({
+            mode: 'rtc',
+            codec: 'vp8'
+        })
+        client.init('9134599c186641cf82c8086b514b50a8')
+        
+        client.join(null, 'any-channe', null, (id) => {
+            const localStream = AgoraRTC.createStream({
+                video: true,
+                audio: true
+            })
+            localStream.init(() => {
+                localStream.play('me')
+                client.publish(localStream, handleFail)
+            }, handleFail)
+        }, handleFail)
+
+        client.on('stream-added', (event) => {
+            client.subscribe(event.stream, handleFail)
+        })
+
+        client.on('stream-subscribed', (event) => {
+            const stream = event.stream
+            const streamId = String(stream.getId())
+            addVideoStream(streamId)
+            stream.play(streamId)
+        })
+
+        client.on('stream-removed', (event) => {
+            const stream = event.stream
+            const streamId = String(stream.getId())
+            stream.close()
+            removeVideoStream(streamId)
+        })
+
+        client.on('peer-leave', (event) => {
+            const stream = event.stream
+            const streamId = String(stream.getId())
+            stream.close()
+            removeVideoStream(streamId)
+        })
+    </script>
+</body>
+
+</html>
